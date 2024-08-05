@@ -2,8 +2,17 @@ from enum import Enum
 from typing import Dict, Union
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from dotenv import load_dotenv
+import shopify
+import os
+
+load_dotenv()
 
 app = FastAPI()
+access_token = os.getenv("SHOPIFY_ACCESS_TOKEN")
+api_version = os.getenv("SHOPIFY_API_VERSION")
+shop_url = os.getenv("SHOPIFY_SHOP_URL")
+shop_name = os.getenv("SHOPIFY_SHOP_NAME")
 
 
 class Category(Enum):
@@ -36,6 +45,17 @@ todos: Dict[int, Todo] = {
 
 @app.get("/")
 def read_root():
+    return {"Hello": "World"}
+
+
+@app.get("/shopify")
+def shopify_session():
+    session = shopify.Session(shop_url, api_version, access_token)
+    shopify.ShopifyResource.activate_session(session)
+
+    shop = shopify.Shop.current()
+    product = shopify.Product.find()
+    print(product)
     return {"Hello": "World"}
 
 
@@ -90,22 +110,3 @@ def read_todo(todo_id: int) -> Dict[str, Todo | str]:
     if todo_id > len(todos):
         return {"message": "invalid ID"}
     return {"todos": todos[todo_id]}
-
-
-@app.get("/items")
-def read_items(name: Union[str, None] = None):
-    for item in items:
-        if item.name == name:
-            return {"data": {"item_name": name}, "message": "success"}
-    if name is None:
-        return {"message": "not available"}
-
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
-
-
-@app.put("/items/{item_id}")
-def update_item(item_id: int, item: Item):
-    return {"item_name": item.name, "item_price": item.price, "item_id": item_id}
